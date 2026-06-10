@@ -46,6 +46,8 @@ def test_adds_only_new_debtors(tmp_path: Path) -> None:
     assert result.inserted == 1
     rows = _read_rows(Path(result.output_workbook))
     assert len(rows) == 4
+    assert rows[1][0] == "100"
+    assert rows[2][0] == "101"
     assert rows[-1][0] == "102"
 
 

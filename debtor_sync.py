@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,7 +34,7 @@ class SyncResult:
 def _clean(value: object) -> str:
     if value is None:
         return ""
-    if isinstance(value, float) and value.is_integer():
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
         value = int(value)
     return str(value).strip()
 
@@ -256,14 +257,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def parse_comma_list(raw: str) -> List[str]:
+    return [c.strip() for c in raw.split(",") if c.strip()]
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = parse_args()
     source = Path(args.source).expanduser().resolve()
     workbook = Path(args.workbook).expanduser().resolve()
     output_dir = Path(args.output_dir).expanduser().resolve()
-    key_columns = [c.strip() for c in args.key_columns.split(",") if c.strip()]
-    required_work_columns = [c.strip() for c in args.required_work_columns.split(",") if c.strip()]
+    key_columns = parse_comma_list(args.key_columns)
+    required_work_columns = parse_comma_list(args.required_work_columns)
 
     try:
         result = sync_debtors(
@@ -275,8 +280,14 @@ def main() -> int:
             source_sheet=args.source_sheet,
             work_sheet=args.work_sheet,
         )
-    except (ValueError, FileNotFoundError, PermissionError):  # pragma: no cover - CLI feedback
-        logging.exception("Synchronisatie mislukt.")
+    except ValueError:  # pragma: no cover - CLI feedback
+        logging.exception("Synchronisatie mislukt door ongeldige input.")
+        return 1
+    except FileNotFoundError:  # pragma: no cover - CLI feedback
+        logging.exception("Synchronisatie mislukt: bestand niet gevonden.")
+        return 1
+    except PermissionError:  # pragma: no cover - CLI feedback
+        logging.exception("Synchronisatie mislukt: onvoldoende rechten op bestand of map.")
         return 1
 
     logging.info("Run gereed. Nieuwe debiteuren toegevoegd: %s", result.inserted)
