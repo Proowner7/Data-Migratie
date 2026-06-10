@@ -84,6 +84,7 @@ def validate_columns(headers: Sequence[str], required: Iterable[str], path: Path
 
 
 def resolve_key(row: Dict[str, str], key_columns: Sequence[str]) -> Tuple[str, str]:
+    """Geef de eerste niet-lege sleutel terug als (kolomnaam, genormaliseerde waarde)."""
     for col in key_columns:
         candidate = _norm(row.get(col, ""))
         if candidate:
@@ -92,6 +93,7 @@ def resolve_key(row: Dict[str, str], key_columns: Sequence[str]) -> Tuple[str, s
 
 
 def has_conflict(existing: Dict[str, str], incoming: Dict[str, str], shared_columns: Sequence[str]) -> bool:
+    """True als beide records in een gedeelde kolom verschillende niet-lege waarden hebben."""
     for col in shared_columns:
         old = _norm(existing.get(col, ""))
         new = _norm(incoming.get(col, ""))
@@ -273,8 +275,8 @@ def main() -> int:
             source_sheet=args.source_sheet,
             work_sheet=args.work_sheet,
         )
-    except Exception as exc:  # pragma: no cover - CLI feedback
-        logging.error(str(exc))
+    except (ValueError, FileNotFoundError, PermissionError):  # pragma: no cover - CLI feedback
+        logging.exception("Synchronisatie mislukt.")
         return 1
 
     logging.info("Run gereed. Nieuwe debiteuren toegevoegd: %s", result.inserted)

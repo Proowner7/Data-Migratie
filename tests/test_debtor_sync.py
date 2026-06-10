@@ -1,9 +1,7 @@
-import sys
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from debtor_sync import sync_debtors
 
 
